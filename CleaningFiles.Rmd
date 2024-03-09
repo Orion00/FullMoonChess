@@ -16,6 +16,7 @@ moon <- vroom("full_moon.csv")
 holidays <- vroom("holidays.csv")
 weather <- vroom("weather.csv")
 crimes <- vroom("Crimes.csv")
+holi <- vroom("")
 ```
 
 ```{r}
@@ -111,7 +112,8 @@ full_df <- full_df %>%
 
 
 full_df <- full_df %>%
-  filter(new_date>"2009-12-31") 
+  filter(new_date>"2009-12-31") %>%
+  filter(new_date<"2024-2-25")
 
 full_df <- full_df[order(full_df$new_date, full_df$Time),]
 
