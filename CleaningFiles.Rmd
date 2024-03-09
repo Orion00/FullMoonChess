@@ -1,0 +1,124 @@
+---
+title: "FullMoonCrime"
+author: "Anna Wolford"
+date: "2024-03-09"
+output: html_document
+---
+
+```{r}
+library(vroom)
+library(tidyverse)
+library(tidymodels)
+```
+
+```{r}
+moon <- vroom("full_moon.csv")
+holidays <- vroom("holidays.csv")
+weather <- vroom("weather.csv")
+crimes <- vroom("Crimes.csv")
+```
+
+```{r}
+summary(moon)
+summary(holidays)
+summary(weather)
+summary(crimes)
+```
+
+All four variables split into date time <!-- CREATE A datetime VARIABLE Y M D -->
+On crimes, split time from date.
+Moon is irrelevant because it's contained in MoonPhase in weather 
+
+```{r}
+# moon <- vroom("full_moon.csv")
+# head(moon)
+# moon$FullMoonDates <- as.Date(moon$FullMoonDates, format = "%d %B %Y")
+
+```
+
+
+```{r}
+# crimes <- vroom("Crimes.csv")
+crimes <- crimes %>%
+  select(-ID, -`Case Number`, -Block, -IUCR, -District, -`FBI Code`)
+crimes$`Primary Type` <- paste0(crimes$`Primary Type`, ", ", crimes$Description)
+crimes <- crimes %>%
+  select(-Description, -`X Coordinate`,
+         -`Y Coordinate`, -Year, -`Updated On`, -Location,
+         -Latitude, -Longitude)
+
+
+crimes <- crimes %>%
+  separate(Date, into = c("Date", "Time"), sep = " ", remove = FALSE)
+
+crimes$Date <- as.Date(crimes$Date, format = "%m/%d/%Y")
+crimes$Date <- format(crimes$Date, "%Y-%m-%d")
+
+crimes <- crimes %>% 
+  rename(new_date = Date)
+
+head(crimes)
+```
+
+```{r}
+# weather <- vroom("weather.csv")
+weather <- weather %>%
+  select(-name, -conditions, -icon, -stations,-description)
+
+weather <- weather %>%
+  select(-tempmin, -tempmax, -temp, -feelslike, -precipprob, -precipcover)
+
+weather <- weather %>%
+  separate(sunrise, into = c("sunriseDate", "sunriseTime"), sep = " ", remove = TRUE)
+
+weather <- weather %>%
+  separate(sunset, into = c("sunsetDate", "sunsetTime"), sep = " ", remove = TRUE)
+
+weather <- weather %>%
+  select(-sunriseDate, -sunsetDate, -uvindex, -solarradiation, -solarenergy, -severerisk, -sealevelpressure, -winddir)
+
+weather <- weather %>% 
+  rename(new_date = datetime)
+head(weather)
+```
+```{r}
+holidays <- vroom("holidays.csv")
+holidays <- holidays %>%
+  select(-`Day of Week`)
+holidays <- holidays  %>% 
+  rename(new_date = Date)
+
+head(holidays)
+
+
+```
+
+## FULL JOIN 
+```{r}
+new_df <- full_join(holidays, weather, by=new_date)
+crimes$new_date <- as.Date(crimes$new_date)
+full_df <- full_join(crimes, new_df)
+
+full_df <- full_df %>%
+  mutate(dayofweek=weekdays(new_date))
+
+
+full_df <- full_df %>%
+  mutate(weekend = ifelse(weekdays(new_date) %in% c("Friday", "Saturday", "Sunday"), 1, 0))
+
+full_df <- full_df %>%
+  select(-dayofweek)
+
+
+full_df <- full_df %>%
+  filter(new_date>"2009-12-31") 
+
+full_df <- full_df[order(full_df$new_date, full_df$Time),]
+
+head(full_df)
+```
+```{r}
+write.csv(full_df, "crimes_cleaned.csv", row.names = FALSE)
+```
+
+
