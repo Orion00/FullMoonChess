@@ -16,7 +16,7 @@ moon <- vroom("full_moon.csv")
 holidays <- vroom("holidays.csv")
 weather <- vroom("weather.csv")
 crimes <- vroom("Crimes.csv")
-holi <- vroom("")
+holi <- vroom("US Federal Pay and Leave Holidays 2004 to 2100.csv")
 ```
 
 ```{r}
@@ -24,6 +24,7 @@ summary(moon)
 summary(holidays)
 summary(weather)
 summary(crimes)
+summary(holi)
 ```
 
 All four variables split into date time <!-- CREATE A datetime VARIABLE Y M D -->
@@ -42,11 +43,11 @@ Moon is irrelevant because it's contained in MoonPhase in weather
 # crimes <- vroom("Crimes.csv")
 crimes <- crimes %>%
   select(-ID, -`Case Number`, -Block, -IUCR, -District, -`FBI Code`)
-crimes$`Primary Type` <- paste0(crimes$`Primary Type`, ", ", crimes$Description)
+# crimes$`Primary Type` <- paste0(crimes$`Primary Type`, ", ", crimes$Description)
 crimes <- crimes %>%
   select(-Description, -`X Coordinate`,
-         -`Y Coordinate`, -Year, -`Updated On`, -Location,
-         -Latitude, -Longitude)
+         -`Y Coordinate`, -Year, -`Updated On`, -Location)
+         # -Latitude, -Longitude)
 
 
 crimes <- crimes %>%
@@ -94,9 +95,16 @@ head(holidays)
 
 ```
 
+```{r}
+holi <- vroom("US Federal Pay and Leave Holidays 2004 to 2100.csv")
+holi <- holi %>% select(Title, Date)
+holi$new_date <- as.Date(holi$Date, format = "%m/%d/%Y")
+```
+
+
 ## FULL JOIN 
 ```{r}
-new_df <- full_join(holidays, weather, by=new_date)
+new_df <- full_join(holi, weather)
 crimes$new_date <- as.Date(crimes$new_date)
 full_df <- full_join(crimes, new_df)
 
@@ -108,7 +116,7 @@ full_df <- full_df %>%
   mutate(weekend = ifelse(weekdays(new_date) %in% c("Friday", "Saturday", "Sunday"), 1, 0))
 
 full_df <- full_df %>%
-  select(-dayofweek)
+  select(-dayofweek, Date)
 
 
 full_df <- full_df %>%
@@ -118,6 +126,7 @@ full_df <- full_df %>%
 full_df <- full_df[order(full_df$new_date, full_df$Time),]
 
 head(full_df)
+length(full_df$new_date)
 ```
 ```{r}
 write.csv(full_df, "crimes_cleaned.csv", row.names = FALSE)

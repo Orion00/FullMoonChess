@@ -1,0 +1,82 @@
+---
+title: "Analysis"
+author: "Orion Bowers"
+date: "`r Sys.Date()`"
+output: html_document
+---
+```{r}
+library(tidyverse)
+crimes <- read.csv('crimes_cleaned.csv')
+unique_crimes <- names(table(crimes$Primary.Type))[table(crimes$Primary.Type) < 7]
+crimes$Primary.Type[crimes$Primary.Type %in% unique_crimes] <- "OTHER"
+crimes$new_date <- as.Date(crimes$new_date)
+```
+
+
+```{r}
+counts <- crimes %>%
+  group_by(new_date) %>%
+  summarise(Count = n()) %>% ungroup()
+
+CrimeCountsFull <- ggplot(counts, aes(x = new_date, y=Count)) +
+  geom_point() +
+  geom_smooth(se=F) +
+  labs(title="Total Crimes by Time", x="Time",y="Total crimes") +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y")
+  
+ggsave("CrimeCounts.png",plot=CrimeCountsFull, width=14,height=7)
+```
+
+
+```{r}
+# cc <- crimes %>%
+#   filter(new_date < "2015-01-01")
+# 
+# counts <- cc %>%
+#   group_by(new_date) %>%
+#   summarise(Count = n()) %>% ungroup()
+# 
+# 
+# CrimeCountsHalf <- ggplot(counts, aes(x = new_date, y=Count)) +
+#   geom_point() +
+#   geom_smooth(se=F) +
+#   labs(title="Total Crimes by Time", x="Time",y="Total crimes") +
+#   scale_x_date(date_breaks = "1 year", date_labels = "%Y")
+#   
+# ggsave("CrimeCountsHalf.png",plot=CrimeCountsHalf, width=14,height=7)
+```
+
+```{r}
+counts <- crimes %>%
+  group_by(new_date,Primary.Type) %>%
+  summarise(Count = n())
+
+counts
+
+ggplot(data=counts, aes(x="", y=Count)) + geom_boxplot()
+counts
+crimes
+
+
+
+
+
+crime_counts <- crimes %>% count(Primary.Type) %>% arrange(n)
+# Reorder the levels of Primary.Type based on count
+crimes$Primary.Type <- factor(crimes$Primary.Type, levels = crime_counts$Primary.Type)
+commonCrimes <- ggplot(crimes, aes(y = Primary.Type, fill=Primary.Type)) + geom_bar() + theme(legend.position = "none")
+ggsave("CommonCrimes.png",commonCrimes, width=10)
+```
+
+```{r}
+crimes %>% group_by(Beat) %>% summarise(Count = n())
+crimes %>% group_by(Ward) %>% summarise(Count = n())
+crimes %>% group_by(Community.Area) %>% summarise(Count = n())
+
+# Proportion of arrests for crimes
+sum(crimes$Arrest)/length(crimes$Arrest)
+
+# Proportion of domestic crimes
+sum(crimes$Domestic)/length(crimes$Domestic)
+```
+
