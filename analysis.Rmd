@@ -8,6 +8,11 @@ output: html_document
 library(tidyverse)
 library(sf)
 library(forecast)
+library(ranger)
+library(workflows)
+library(parsnip)
+library(recipes)
+
 crimes <- read.csv('crimes_cleaned.csv')
 
 unique_crimes <- names(table(crimes$Primary.Type))[table(crimes$Primary.Type) < 7]
@@ -166,5 +171,11 @@ Arima(my.ts, order=c(1,1,1), seasonal=c(1,1,1), xreg=X)
 ```
 ```{r}
 ## Random Forest
+# recipe <- 
+# 
+# forest <- rand_forest(mtry=tune(), min_n=tune(), trees=500) %>%
+#   set_engine("ranger") %>% set_mode("classification")
+
+
 ```
 
