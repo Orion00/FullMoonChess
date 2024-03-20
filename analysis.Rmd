@@ -141,7 +141,7 @@ crimes_acf <- crimes %>%
 
 # Don't include time, arrest, domestic, latitude, longitude, sunset or sunrise
 
-ggAcf(x=crimes_acf$Crimes, lag.max=50)
+
 
 crimes_acf <- crimes %>%
   group_by(YrMon) %>%
@@ -149,25 +149,35 @@ crimes_acf <- crimes %>%
     Crimes = n(),
     # YrMon = mean(YrMon)
     # moonphase = get_mode(moonphase)
+     precip = mean(precip),
+    snow = mean(snow)
   )
 
+ggAcf(x=crimes_acf$Crimes, lag.max=50)
 
+crimes_acf$Crimes <- (crimes_acf$Crimes - mean(crimes_acf$Crimes))/sd(crimes_acf$Crimes)
 
-my.ts <- ts(data=crimes_acf$Crimes, start=c(2010,1), frequency=1)
-X <- model.matrix(Crimes~-1+YrMon+Beat+Holiday+feelslikemax+feelslikemin+humidity+precip+snow+snowdepth+windgust+windspeed+visibility+moonphase+weekend, data=crimes_acf)
-X <- model.matrix(Crimes~.,data=crimes_acf)
-length(X)
+crimes_acf$precip <- (crimes_acf$precip - mean(crimes_acf$precip))/sd(crimes_acf$precip)
+crimes_acf$snow <- (crimes_acf$snow - mean(crimes_acf$snow))/sd(crimes_acf$snow)
+
+my.ts <- ts(data=crimes_acf$Crimes, start=c(2010,1), frequency=365)
+X <- model.matrix(Crimes~Beat+Holiday+feelslikemax+feelslikemin+humidity+precip+snow+snowdepth+windgust+windspeed+visibility+moonphase+weekend, data=crimes_acf)
+X <- model.matrix(Crimes~-1+precip+snow,data=crimes_acf)
+
+X
 # YrMon+Location.Description+Beat+Ward+Community.Area+Holiday+feelslikemax+feelslikemin+dew+humidity+precip+snow+snowdepth+windgust+windspeed+cloudcover+visibility+moonphase+weekend
+Beat+Holiday+feelslikemax+feelslikemin+humidity+precip+snow+snowdepth+windgust+windspeed+visibility+moonphase+weekend
 
-
+ggplot(data=crimes_acf, aes(x=YrMon,y=Crimes))+geom_point()
 
 summary(my.ts)
+ggPacf(diff(crimes_acf$Crimes))
 
-max_iter <- 2
 cc.aarima <- auto.arima(my.ts, max.p= 3, max.q= 3, max.P=3, 
                         max.Q=3, max.d=2, max.D=2, ic="aic", 
                         stepwise=FALSE, xreg=X)
-Arima(my.ts, order=c(1,1,1), seasonal=c(1,1,1), xreg=X)
+Arima(my.ts, order=c(5,1,1), xreg=X)
+
 ```
 ```{r}
 ## Random Forest
