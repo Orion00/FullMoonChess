@@ -13,6 +13,8 @@ library(workflows)
 library(parsnip)
 library(recipes)
 library(zoo)
+library(multcomp)
+library(car)
 
 crimes <- read.csv('crimes_cleaned.csv')
 
@@ -26,6 +28,7 @@ crimes$Ward[crimes$Ward %in% unique_ward] <- "OTHER"
 crimes$isFullMoon <- as.numeric(crimes$moonphase < .55 & crimes$moonphase > .45)
 ```
 
+## EDA
 
 ```{r}
 counts <- crimes %>%
@@ -96,6 +99,7 @@ ggplot() +
 summary(crimes_sm)
 ```
 
+## Nonsensical code
 
 ```{r}
 ## Trying to get an ARIMA model to work
@@ -190,6 +194,7 @@ summary(crimes_sm)
 #   set_engine("ranger") %>% set_mode("classification")
 ```
 
+## Fitting ARIMA Model
 
 ```{r}
 get_mode <- function(x) {
@@ -205,7 +210,6 @@ replace_na_with_empty <- function(x) {
   ifelse(all(is.na(x)), "None", ifelse(is.na(x), "None", as.character(x)))
 }
 
-
 crimes_acf <- crimes %>%
   group_by(new_date) %>%
   summarise(
@@ -215,7 +219,8 @@ crimes_acf <- crimes %>%
     Beat = get_mode(as.factor(Beat)),
     Ward = get_mode(as.factor(Ward)),
     Community.Area = get_mode(as.factor(Community.Area)),
-    Holiday = replace_na_with_empty(Title),
+    # Holiday = replace_na_with_empty(Title),
+    Holiday = as.numeric(did_happen(Title)),
     feelslikemax = mean(feelslikemax),
     feelslikemin = mean(feelslikemin),
     dew = mean(dew),
@@ -235,33 +240,111 @@ crimes_acf <- crimes %>%
     weekend = get_mode(weekend)
   )
 
+max_crime_row <- which.max(crimes_acf$Crimes)
+crimes_acf[max_crime_row,]
+
+crimes_acf[max_crime_row, "Crime"] <- mean(crimes_acf$Crimes)
+crimes$Year = year(as.Date(crimes$new_date))
+crimes$Month = month(as.Date(crimes$new_date))
+crimes$Day = day(as.Date(crimes$new_date))
+
+
+
+
+
+
+
+# Homework Assignment - Replace that day with mean of crimes from other years
+cc <- crimes %>%
+  filter(Day == "31" & Month == "5" & Year != "2020") %>% group_by(new_date) %>% summarize(d = n())
+cc
+
+
+
+
+
+
+
 zoo_data <- zoo(crimes_acf$Crimes, crimes_acf$new_date)
-
-
 
 # Adding more than 11 factors seems to be grumpy
 # Remove Preciptype
 # Holiday, Community Area, Ward, Beat, Location.Description is grumpy for no reason (Too big of an X matrix?)
-X <- model.matrix(Crimes~-1+isFullMoon+feelslikemax+feelslikemin+dew+precip+snow+snowdepth+windgust+windspeed+cloudcover+visibility+weekend,data=crimes_acf)
+X <- model.matrix(Crimes~-1+isFullMoon+Holiday+feelslikemax+feelslikemin+dew+precip+snow+snowdepth+windgust+windspeed+cloudcover+visibility+weekend,data=crimes_acf)
 
 c.lm <- Arima(zoo_data, order=c(3,0,2), xreg=X)
-cc.aarima <- auto.arima(zoo_data, max.p= 5, max.q= 3, max.P=3, 
-                        max.Q=3, max.d=2, max.D=2, ic="aic", 
-                        stepwise=FALSE, xreg=X)
+# Ideal is 3,1,2. We did 3,0,2 since it increased the AIC by 10 but helps interpretability
+# cc.aarima <- auto.arima(zoo_data, max.p= 5, max.q= 3, max.P=3, 
+#                         max.Q=3, max.d=2, max.D=2, ic="aic", 
+#                         stepwise=FALSE, xreg=X)
 
 summary(c.lm)
+confint(c.lm)
 ```
 
-
-
-```{r}
 ## Validating Our Feelings/Assumptions
-init_acf <- ggAcf(crimes_acf$Crimes, lag.max=1000)
-model_acf <- ggAcf(c.lm$residuals, lag.max=1000) + labs(title="ACF Plot for model Residuals")
+
+```{r message=F}
+# Linearity - Good
+c.lm.dummy <- lm(Crimes~-1+isFullMoon+Holiday+feelslikemax+feelslikemin+dew+precip+snow+snowdepth+windgust+windspeed+cloudcover+visibility+weekend,data=crimes_acf)
+avPlots(c.lm.dummy, ask = FALSE)
+
+# Independence - Questionable but mostly good
+init_acf <- ggAcf(crimes_acf$Crimes, lag.max=1000) + labs(title="ACF Plot for Crime Counts")
+model_acf <- ggAcf(c.lm$residuals, lag.max=1000) + labs(title="ACF Plot for Residuals")
 ggsave("InitACF.png",init_acf, width=10)
 ggsave("ModelACF.png",model_acf, width=10)
 
+# Normality of Residuals - Several outliers, the rest is happy
+hist_res <- ggplot(mapping=aes(x=resid(c.lm))) + geom_histogram() + labs(title="Histogram of Residuals", x="Residuals")
+ggsave("HistogramOfResiduals.png",hist_res, width=10)
+
+# Equal Variance - No obvious pattern
+fit_vs_resid <- ggplot(mapping=aes(y=resid(c.lm),x=fitted(c.lm))) + geom_point()+ labs(title="Fitted Values vs Residuals", y="Residuals", x="Fitted Values")
+ggsave("FittedvsResiduals.png",fit_vs_resid, width=10)
+```
+
+
+```{r message=F}
+# Cross Validation
+n.cv <- nrow(X)
+rpmse <- rep(x=NA, times=n.cv)
+cvg <- rep(x=NA, times=n.cv)
+
+test.set <- crimes_acf[4019:5168,] # Jan 1, 2021 - Feb 24, 2024
+train.set <- crimes_acf[-(4019:5168),]
+# ts_train <- ts(data=train.set$AnnAnom, start=c(1950,1), frequency=12)
+ts_train <- zoo(train.set$Crimes, train.set$new_date)
+X_train <- model.matrix(Crimes~-1+isFullMoon+Holiday+feelslikemax+feelslikemin+dew+precip+snow+snowdepth+windgust+windspeed+cloudcover+visibility+weekend,data=train.set)
+X_test <- model.matrix(Crimes~-1+isFullMoon+Holiday+feelslikemax+feelslikemin+dew+precip+snow+snowdepth+windgust+windspeed+cloudcover+visibility+weekend,data=test.set)
+
+# Fit
+train.lm <- Arima(ts_train, order=c(3,0,2), seasonal=c(0,0,0), xreg=X_train)
+
+# Predict
+my.preds <- forecast(train.lm, xreg=X_test, level=c(.95))
+
+# RPMSE
+rpmse <- (test.set[['Crimes']]-my.preds$mean)^2 %>% mean() %>% sqrt()
+rpmse
+sd(crimes_acf$Crimes)
+
+# Coverage
+cvg <- ((test.set[['Crimes']] > my.preds$lower) 
+        & (test.set[['Crimes']] < my.preds$upper)) %>% mean()
+cvg
+
+
+# Pseudo R^2
 cor(c.lm$residuals, crimes_acf$Crimes)
-confint(c.lm)
+```
+
+## Inference
+
+```{r}
+X_predict <- (X_test+5)
+my.preds <- forecast(c.lm, xreg=X_predict, level=c(.95))
+
+plot(my.preds)
 ```
 
