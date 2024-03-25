@@ -240,25 +240,17 @@ crimes_acf <- crimes %>%
     weekend = get_mode(weekend)
   )
 
-max_crime_row <- which.max(crimes_acf$Crimes)
-crimes_acf[max_crime_row,]
 
-crimes_acf[max_crime_row, "Crime"] <- mean(crimes_acf$Crimes)
+
 crimes$Year = year(as.Date(crimes$new_date))
 crimes$Month = month(as.Date(crimes$new_date))
 crimes$Day = day(as.Date(crimes$new_date))
 
 
+imputed_mean <- mean(crimes_acf$Crimes[day(crimes_acf$new_date) == "31" & month(crimes_acf$new_date) == "5" & year(crimes_acf$new_date) != "2020"])
 
-
-
-
-
-# Homework Assignment - Replace that day with mean of crimes from other years
-cc <- crimes %>%
-  filter(Day == "31" & Month == "5" & Year != "2020") %>% group_by(new_date) %>% summarize(d = n())
-cc
-
+max_crime_row <- which.max(crimes_acf$Crimes)
+crimes_acf[max_crime_row,]$Crimes = as.integer(imputed_mean)
 
 
 
@@ -280,6 +272,9 @@ c.lm <- Arima(zoo_data, order=c(3,0,2), xreg=X)
 
 summary(c.lm)
 confint(c.lm)
+
+# True: 37562.49
+# Imputed: 37457.27
 ```
 
 ## Validating Our Feelings/Assumptions
@@ -325,6 +320,8 @@ train.lm <- Arima(ts_train, order=c(3,0,2), seasonal=c(0,0,0), xreg=X_train)
 my.preds <- forecast(train.lm, xreg=X_test, level=c(.95))
 
 # RPMSE
+# true: 11.83661
+# imputed: 11.59
 rpmse <- (test.set[['Crimes']]-my.preds$mean)^2 %>% mean() %>% sqrt()
 rpmse
 sd(crimes_acf$Crimes)
@@ -336,6 +333,8 @@ cvg
 
 
 # Pseudo R^2
+# True: 0.6722103
+# Imputed: 0.6669776
 cor(c.lm$residuals, crimes_acf$Crimes)
 ```
 
