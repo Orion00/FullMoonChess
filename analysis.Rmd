@@ -309,6 +309,12 @@ confint(c.lm)
 # 2014, 12.15 (0,0,2): 24894.93
 # 2014, 12.155 (0,0,2) With Major Holiday: 24890.32
 ```
+## Crimes_acf by day
+```{r}
+CountCrimes2015 <- ggplot(crimes_acf, aes(y = Crimes, x=new_date)) + geom_line() + labs(title = "Daily Crime in Chicago", x="Date")
+ggsave("CountCrimes2015.png",CountCrimes2015, width=15)
+```
+
 
 ## Validating Our Feelings/Assumptions
 
@@ -336,9 +342,7 @@ ggsave("FittedvsResiduals.png",fit_vs_resid, width=10)
 ```{r message=F}
 # Cross Validation
 n.cv <- nrow(X)
-rpmse <- rep(x=NA, times=n.cv)
-cvg <- rep(x=NA, times=n.cv)
-tail(crimes)
+
 test.set <- crimes_acf[2210:nrow(crimes_acf),] # Jan 1, 2021 - Feb 24, 2024
 train.set <- crimes_acf[-(2210:nrow(crimes_acf)),]
 # ts_train <- ts(data=train.set$AnnAnom, start=c(1950,1), frequency=12)
@@ -364,8 +368,12 @@ sd(crimes_acf$Crimes)
 # Coverage
 cvg <- ((test.set[['Crimes']] > my.preds$lower) 
         & (test.set[['Crimes']] < my.preds$upper)) %>% mean()
-cvg
 
+## Calculate bias
+bias <- mean(my.preds$mean-test.set[['Crimes']])
+  
+## Calculate Width
+wid <- (my.preds$upper - my.preds$lower) %>% mean()
 
 # Pseudo R^2
 # True: 0.6722103
@@ -377,9 +385,57 @@ cor(c.lm$residuals, crimes_acf$Crimes)
 ## Inference
 
 ```{r}
+Crimes~-1+isFullMoon+Ward+Holiday+feelslikemax+feelslikemin+dew+precip+snow+snowdepth+windgust+windspeed+cloudcover+visibility+weekend
+crimes_aa <- 
+  crimes_acf <- crimes %>%
+  group_by(day(new_date), month(new_date)) %>%
+  summarise(
+    Crimes = mean(x)
+  )
+
+crimes_aa
+%>%
+  summarise(
+    Crimes = n(),
+    # YrMon = mean(YrMon),
+    Location.Description = get_mode(Location.Description),
+    Beat = get_mode(as.factor(Beat)),
+    Ward = get_mode(as.factor(Ward)),
+    Community.Area = get_mode(as.factor(Community.Area)),
+    # Holiday = replace_na_with_empty(Title),
+    # Holiday = as.numeric(did_happen(Title)),
+    Holiday = nicky_Holiday(Title),
+    feelslikemax = mean(feelslikemax),
+    feelslikemin = mean(feelslikemin),
+    dew = mean(dew),
+    humidity = mean(humidity),
+    precip = mean(precip),
+    # preciptype = replace_na_with_empty(preciptype),
+    snow = mean(snow),
+    snowdepth = mean(snowdepth),
+    windgust = as.numeric(did_happen(windgust)),
+    windspeed = mean(windspeed),
+    cloudcover = get_mode(cloudcover),
+    visibility = get_mode(visibility),
+    # sunriseTime = get_mode(sunriseTime),
+    # sunsetTime = get_mode(sunsetTime),
+    # moonphase = get_mode(moonphase),
+    isFullMoon = mean(isFullMoon),
+    weekend = get_mode(weekend)
+  )
+
+
 X_predict <- (X_test)
 my.preds <- forecast(c.lm, xreg=X_test, level=c(.95), h=nrow(X_test))
+my.preds <- forecast(c.lm, level=c(.95), h=365)
 
 plot(my.preds)
+
+predict(c.lm,n.ahead=12)
 ```
+
+```{r}
+
+```
+
 

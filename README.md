@@ -3,6 +3,6 @@ BYU 2024 Case Study
 
 Objectives:
 
-- Do Full Moons, Weather, Holidays, or Weekends affect Crime in Chicago? And types of Crime?
-- What type of crimes can we predict for the coming year?
-- Predict where crimes may take place? (Ward, Community, or Lat/Long)
+- Do Full Moons, Weather, Holidays, or Weekends affect crime in Chicago?
+- Can we predict accurate daily crime for the coming year?
+- Can we predict what Ward crimes may take place?
