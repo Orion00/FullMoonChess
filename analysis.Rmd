@@ -405,3 +405,50 @@ ggsave("only_forecast.png",only_forecast, width=15)
 
 
 
+##Coefficient Viz
+```{r}
+library(GGally)
+
+coef_int <- confint(c.lm)
+coef_est <- coef(c.lm)
+
+interval_colors <- ifelse(coef_int[,1] <= 0 & coef_int[,2] >= 0, "black", "blue")
+
+
+
+coef_df <- data.frame(
+  Coefficient = names(coef_est),
+  Estimate = coef_est,
+  Lower = coef_int[,1],
+  Upper = coef_int[, 2],
+  Interval_Color = interval_colors
+)
+
+
+coef_df$Significant <- coef_df$Interval_Color != "black"
+
+# Calculate interval width for sorting purpose
+coef_df$IntervalWidth <- abs(coef_df$Upper - coef_df$Lower)
+
+# Step 2: Order 'coef_df' by significance, then by interval width
+coef_df_ordered <- coef_df[6:nrow(coef_df), ] %>%
+  arrange(Significant, desc(IntervalWidth))
+
+# Convert Coefficient to factor based on the new order to ensure it plots correctly
+coef_df_ordered$Coefficient <- factor(coef_df_ordered$Coefficient, levels = unique(coef_df_ordered$Coefficient))
+
+# Step 3: Plot
+Confint_Pred_plot <- ggplot(coef_df_ordered, aes(y = Coefficient, x = Estimate, color = Interval_Color)) +
+  geom_point(size = 1) +
+  geom_segment(aes(x = Lower, xend = Upper, y = Coefficient, yend = Coefficient), size = 1) + 
+  labs(title = "Predictor Estimates with 95% Confidence Intervals",
+       x = "Estimate",
+       y = "Predictor") +
+  geom_vline(xintercept = 0, linetype = "dotted", color = "red", size = 1) +
+  scale_color_manual(values = c("black" = "black", "blue" = "blue")) +
+  theme(legend.position = "none")
+
+
+ggsave("Confint_Pred_plot.png", Confint_Pred_plot)
+
+```
