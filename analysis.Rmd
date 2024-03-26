@@ -27,8 +27,6 @@ unique_ward <- names(table(crimes$Ward))[table(crimes$Ward) < 15706]
 crimes$Ward[crimes$Ward %in% unique_ward] <- "OTHER"
 
 crimes$isFullMoon <- as.numeric(crimes$moonphase < .55 & crimes$moonphase > .45)
-
-table(crimes$Title)
 ```
 
 ## EDA
@@ -266,11 +264,6 @@ crimes_acf <- crimes %>%
 crimes_acf <-  crimes_acf %>% filter(new_date >= "2014-12-15")
 
 
-# crimes$Year = year(as.Date(crimes$new_date))
-# crimes$Month = month(as.Date(crimes$new_date))
-# crimes$Day = day(as.Date(crimes$new_date))
-
-
 imputed_mean <- mean(crimes_acf$Crimes[day(crimes_acf$new_date) == "31" & month(crimes_acf$new_date) == "5" & year(crimes_acf$new_date) != "2020"])
 
 max_crime_row <- which.max(crimes_acf$Crimes)
@@ -308,6 +301,7 @@ confint(c.lm)
 
 # 2014, 12.15 (0,0,2): 24894.93
 # 2014, 12.155 (0,0,2) With Major Holiday: 24890.32
+# Most recent: 23909.25
 ```
 ## Crimes_acf by day
 ```{r}
@@ -353,7 +347,7 @@ X_test <- model.matrix(Crimes~-1+isFullMoon+Ward+Holiday+feelslikemax+feelslikem
 X_test <- X_test[,-5]
 
 # Fit
-train.lm <- Arima(ts_train, order=c(3,0,2), seasonal=c(0,0,0), xreg=X_train)
+train.lm <- Arima(ts_train, order=c(2,0,2), seasonal=c(0,0,0), xreg=X_train)
 
 # Predict
 my.preds <- forecast(train.lm, xreg=X_test, level=c(.95))
@@ -374,6 +368,7 @@ bias <- mean(my.preds$mean-test.set[['Crimes']])
   
 ## Calculate Width
 wid <- (my.preds$upper - my.preds$lower) %>% mean()
+wid
 
 # Pseudo R^2
 # True: 0.6722103
@@ -385,57 +380,28 @@ cor(c.lm$residuals, crimes_acf$Crimes)
 ## Inference
 
 ```{r}
-Crimes~-1+isFullMoon+Ward+Holiday+feelslikemax+feelslikemin+dew+precip+snow+snowdepth+windgust+windspeed+cloudcover+visibility+weekend
-crimes_aa <- 
-  crimes_acf <- crimes %>%
-  group_by(day(new_date), month(new_date)) %>%
-  summarise(
-    Crimes = mean(x)
-  )
+X_predict <-X[(nrow(X) - 364):nrow(X), ]
+my.preds <- forecast(c.lm, xreg=X_predict, level=c(.95))
 
-crimes_aa
-%>%
-  summarise(
-    Crimes = n(),
-    # YrMon = mean(YrMon),
-    Location.Description = get_mode(Location.Description),
-    Beat = get_mode(as.factor(Beat)),
-    Ward = get_mode(as.factor(Ward)),
-    Community.Area = get_mode(as.factor(Community.Area)),
-    # Holiday = replace_na_with_empty(Title),
-    # Holiday = as.numeric(did_happen(Title)),
-    Holiday = nicky_Holiday(Title),
-    feelslikemax = mean(feelslikemax),
-    feelslikemin = mean(feelslikemin),
-    dew = mean(dew),
-    humidity = mean(humidity),
-    precip = mean(precip),
-    # preciptype = replace_na_with_empty(preciptype),
-    snow = mean(snow),
-    snowdepth = mean(snowdepth),
-    windgust = as.numeric(did_happen(windgust)),
-    windspeed = mean(windspeed),
-    cloudcover = get_mode(cloudcover),
-    visibility = get_mode(visibility),
-    # sunriseTime = get_mode(sunriseTime),
-    # sunsetTime = get_mode(sunsetTime),
-    # moonphase = get_mode(moonphase),
-    isFullMoon = mean(isFullMoon),
-    weekend = get_mode(weekend)
-  )
+png("forecast_full.png", width = 10, height = 4, units = "in", res = 300)
+plot(my.preds, xaxt = "n")
+date_labels <- seq(from = min(crimes_acf$new_date), to = as.Date("2025-02-24"), by = "1 day")
+ # Example: labels every month
+axis(side = 1, at = date_labels, labels = format(date_labels, "%Y"), cex.axis = 1.45)  # Example: format as "Mon YYYY"
+
+dev.off()
 
 
-X_predict <- (X_test)
-my.preds <- forecast(c.lm, xreg=X_test, level=c(.95), h=nrow(X_test))
-my.preds <- forecast(c.lm, level=c(.95), h=365)
+forecast_df <- as.data.frame(my.preds)
+dates <- seq(as.Date("2024-02-25"), as.Date("2025-02-23"), by = "day")
+date_df <- data.frame(Date = dates)
 
-plot(my.preds)
-
-predict(c.lm,n.ahead=12)
+only_forecast <- ggplot(data = forecast_df,aes(x=date_df$Date)) +
+  geom_line(aes(y = `Point Forecast`)) +  # Plot the point forecasts
+  geom_ribbon(aes(ymin = `Lo 95`, ymax = `Hi 95`), fill = "dodgerblue", alpha = 0.3) +  # Plot the 95% confidence interval
+  labs(x = "Time", y = "Crimes", title = "Forecast Plot")
+ggsave("only_forecast.png",only_forecast, width=15)
 ```
 
-```{r}
-
-```
 
 
