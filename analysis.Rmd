@@ -452,3 +452,8 @@ Confint_Pred_plot <- ggplot(coef_df_ordered, aes(y = Coefficient, x = Estimate, 
 ggsave("Confint_Pred_plot.png", Confint_Pred_plot)
 
 ```
+
+```{r}
+write.csv(crimes_acf, "aggregated_crimes.csv", row.names = FALSE)
+```
+
