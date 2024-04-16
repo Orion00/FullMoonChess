@@ -132,39 +132,13 @@ shap.force_plot(
 
 ##Psuedo R-Squared
 #%%
-from sklearn.metrics import mean_squared_error
-
-# Make predictions
-y_train_pred = model.predict(X_train_preprocessed)
-y_test_pred = model.predict(X_test_preprocessed)
-
-# Calculate mean squared error for the model
-mse_model_train = mean_squared_error(y_train, y_train_pred)
-mse_model_test = mean_squared_error(y_test, y_test_pred)
-
-# Calculate the total sum of squares
-sst_total_train = np.sum((y_train - np.mean(y_train)) ** 2)
-sst_total_test = np.sum((y_test - np.mean(y_test)) ** 2)
-
-# Calculate pseudo R-squared
-pseudo_r2_train = 1 - (mse_model_train / sst_total_train)
-pseudo_r2_test = 1 - (mse_model_test / sst_total_test)
-
-print(f"Pseudo R-squared (Train): {pseudo_r2_train:.4f}")
-print(f"Pseudo R-squared (Test): {pseudo_r2_test:.4f}")
-
-
-#%%
 
 # Generate predictions for the training and testing data
 y_train_pred = model.predict(X_train_preprocessed).flatten()
-y_test_pred = model.predict(X_test_preprocessed).flatten()
 
 # Calculate the residuals
 residuals_train = y_train - y_train_pred
-residuals_test = y_test - y_test_pred
 
-np.corrcoef(residuals_test,y_test)
 np.corrcoef(residuals_train,y_train)
 
 
