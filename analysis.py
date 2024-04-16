@@ -79,6 +79,19 @@ model = Sequential([
 ])
 
 
+#%%
+from tensorflow.keras.callbacks import EarlyStopping
+
+# Initialize the EarlyStopping callback
+early_stopping = EarlyStopping(
+    monitor='mean_absolute_error',   
+    patience=15,           # Number of epochs with no improvement after which training will be stopped
+    verbose=1,             # To log when training is stopped
+    restore_best_weights=True  # Restores model weights from the epoch with the best value of the monitored metric
+)
+
+
+
 
 
 # %%
@@ -88,11 +101,13 @@ model.compile(optimizer=Adam(learning_rate=0.001),
 
 
 # %%
-history = model.fit(X_train_preprocessed, y_train,
-                    epochs=100,
-                    batch_size=32,
-                    validation_split=0.2,
-                    verbose=1)
+history = model.fit(
+    X_train_preprocessed,
+    y_train,
+    validation_data=(X_test_preprocessed, y_test),
+    epochs=100,
+    callbacks=[early_stopping]
+)
 
 
 # %%
@@ -100,26 +115,6 @@ test_results = model.evaluate(X_test_preprocessed, y_test, verbose=1)
 print(test_results)
 
 ###SHAP
-# %%
-
-#explainer = shap.DeepExplainer(model, X_train_preprocessed)
-
-#shap_values = explainer.shap_values(X_test_preprocessed)
-#shap_values_squeezed = np.array(shap_values[0]).squeeze(-1)
-explainer = shap.Explainer(model, X_train_preprocessed)
-
-# Calculate SHAP values for the test set
-shap_values = explainer(X_test_preprocessed)
-
-# Visualizing the first prediction
-# SHAP values for the first instance are accessed with shap_values[0]
-# Note: shap_values.values provides the raw SHAP values array
-shap.force_plot(
-    base_value=explainer.expected_value,  # or explainer.expected_value[0] if it's a list/array
-    shap_values=shap_values.values[0],    # SHAP values for the first instance
-    features=X_test_preprocessed[0]       # Actual feature values for the first instance
-)
-
 #%%
 explainer = shap.Explainer(model, X_train_preprocessed)
 
@@ -135,5 +130,145 @@ shap.force_plot(
     matplotlib=True    # Optional: Use matplotlib=True to generate plots that are easier to display in some environments
 )
 
+##Psuedo R-Squared
+#%%
+from sklearn.metrics import mean_squared_error
 
+# Make predictions
+y_train_pred = model.predict(X_train_preprocessed)
+y_test_pred = model.predict(X_test_preprocessed)
+
+# Calculate mean squared error for the model
+mse_model_train = mean_squared_error(y_train, y_train_pred)
+mse_model_test = mean_squared_error(y_test, y_test_pred)
+
+# Calculate the total sum of squares
+sst_total_train = np.sum((y_train - np.mean(y_train)) ** 2)
+sst_total_test = np.sum((y_test - np.mean(y_test)) ** 2)
+
+# Calculate pseudo R-squared
+pseudo_r2_train = 1 - (mse_model_train / sst_total_train)
+pseudo_r2_test = 1 - (mse_model_test / sst_total_test)
+
+print(f"Pseudo R-squared (Train): {pseudo_r2_train:.4f}")
+print(f"Pseudo R-squared (Test): {pseudo_r2_test:.4f}")
+
+
+#%%
+
+# Generate predictions for the training and testing data
+y_train_pred = model.predict(X_train_preprocessed).flatten()
+y_test_pred = model.predict(X_test_preprocessed).flatten()
+
+# Calculate the residuals
+residuals_train = y_train - y_train_pred
+residuals_test = y_test - y_test_pred
+
+np.corrcoef(residuals_test,y_test)
+np.corrcoef(residuals_train,y_train)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# %%
+
+plt.figure(figsize=(20, 10)) # Increase the figure size as needed
+
+# Generate the SHAP force plot
+shap.force_plot(
+    shap_values[0].base_values, # Use the base value for the first instance
+    shap_values[0].values,     # SHAP values for the first instance
+    feature_names=feature_names,  # The correctly defined feature names
+    matplotlib=True             # Generate the plot using matplotlib
+)
+
+# %%
+shap_html = shap.force_plot(
+    shap_values[0].base_values,  # Base value for the first instance
+    shap_values[0].values,       # SHAP values for the first instance
+    feature_names=feature_names,  # The correctly defined feature names
+    show=False                    # Do not show the plot immediately since we want to save it
+)
+
+# Save the plot to an HTML file
+shap.save_html('shap_force_plot.html', shap_html)
+
+# Generate a textual summary
+summary_text = "\n".join(f"{feature}: {value:.4f}" for feature, value in zip(feature_names, shap_values[0].values))
+
+# Save the summary to a text file
+with open('shap_summary.txt', 'w') as file:
+    file.write(summary_text)
+
+# Provide the paths to the saved HTML and summary text files
+shap_plot_html_path = 'shap_force_plot.html'
+shap_summary_text_path = 'shap_summary.txt'
+# %%
+
+# Create a horizontal bar plot with SHAP values
+fig, ax = plt.subplots(figsize=(10, len(feature_names) / 2))  # Set an appropriate figure size
+
+# Sort the features by their SHAP values
+sorted_indices = np.argsort(shap_values[0].values)
+sorted_feature_names = np.array(feature_names)[sorted_indices]
+sorted_shap_values = shap_values[0].values[sorted_indices]
+
+# Create the bar plot
+ax.barh(range(len(sorted_feature_names)), sorted_shap_values, color='skyblue')
+
+# Annotate the bars with the SHAP values
+for index, value in enumerate(sorted_shap_values):
+    ax.text(value, index, str(round(value, 4)), va='center', ha='right' if value < 0 else 'left')
+
+# Set the y-ticks to feature names
+ax.set_yticks(range(len(sorted_feature_names)))
+ax.set_yticklabels(sorted_feature_names)
+
+# Labeling
+ax.set_xlabel('SHAP value')
+ax.set_title('SHAP values per feature')
+
+# Show grid
+ax.grid(True)
+
+
+
+# %%
+filtered_indices = [i for i, feature in enumerate(feature_names) if not feature.endswith('^2')]
+filtered_shap_values = shap_values[0].values[filtered_indices]
+filtered_feature_names = np.array(feature_names)[filtered_indices]
+
+# Now sort by absolute SHAP values and get the indices of the top 10
+top_indices = np.argsort(-np.abs(filtered_shap_values))[:15]
+
+# Get the SHAP values and names for the top 10 features
+top_shap_values = filtered_shap_values[top_indices]
+top_feature_names = filtered_feature_names[top_indices]
+
+# Create a horizontal bar plot for the top 10 features
+plt.figure(figsize=(10, 5))  # Adjust the figure size as needed
+plt.barh(top_feature_names, top_shap_values, color='skyblue')
+
+# Annotate the bars with SHAP values
+for i, (value, feature) in enumerate(zip(top_shap_values, top_feature_names)):
+    plt.text(value, i, f'{value:.4f}', va='center', ha='right' if value < 0 else 'left')
+
+# Labeling the plot
+plt.xlabel('SHAP value')
+plt.title('Top 15 SHAP values per feature')
+plt.grid(True)
+
+# Show the plot
+plt.show()
 # %%

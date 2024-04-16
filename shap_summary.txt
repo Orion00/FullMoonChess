@@ -1,0 +1,111 @@
+num__Beat: 0.9906
+num__Community.Area: 0.4216
+num__feelslikemax: -0.3856
+num__feelslikemin: -0.1512
+num__dew: -0.7317
+num__humidity: -0.7779
+num__precip: -0.3407
+num__snow: 0.0072
+num__snowdepth: 0.0827
+num__windgust: 0.0000
+num__windspeed: -0.2361
+num__cloudcover: -0.2333
+num__visibility: -0.0443
+num__Beat^2: 0.7984
+num__Beat Community.Area: 0.1614
+num__Beat feelslikemax: -0.4109
+num__Beat feelslikemin: -0.5853
+num__Beat dew: -0.9404
+num__Beat humidity: -0.2713
+num__Beat precip: -0.3306
+num__Beat snow: 0.0178
+num__Beat snowdepth: -0.0125
+num__Beat windgust: -0.4168
+num__Beat windspeed: -0.0988
+num__Beat cloudcover: -0.1330
+num__Beat visibility: 0.1360
+num__Community.Area^2: -0.3761
+num__Community.Area feelslikemax: -0.6684
+num__Community.Area feelslikemin: 0.0337
+num__Community.Area dew: -1.0715
+num__Community.Area humidity: 0.1416
+num__Community.Area precip: -0.3406
+num__Community.Area snow: -0.0046
+num__Community.Area snowdepth: -0.0586
+num__Community.Area windgust: 0.4750
+num__Community.Area windspeed: -0.3246
+num__Community.Area cloudcover: 0.1238
+num__Community.Area visibility: 0.0712
+num__feelslikemax^2: 1.5407
+num__feelslikemax feelslikemin: 2.7191
+num__feelslikemax dew: 1.1524
+num__feelslikemax humidity: -0.8053
+num__feelslikemax precip: 0.5817
+num__feelslikemax snow: -0.0142
+num__feelslikemax snowdepth: 0.0573
+num__feelslikemax windgust: -0.4865
+num__feelslikemax windspeed: 0.4632
+num__feelslikemax cloudcover: -0.5919
+num__feelslikemax visibility: -0.5190
+num__feelslikemin^2: 3.6262
+num__feelslikemin dew: 2.5278
+num__feelslikemin humidity: -0.5353
+num__feelslikemin precip: -0.1049
+num__feelslikemin snow: 0.0242
+num__feelslikemin snowdepth: 0.0985
+num__feelslikemin windgust: 0.1140
+num__feelslikemin windspeed: -0.9921
+num__feelslikemin cloudcover: -0.7429
+num__feelslikemin visibility: -0.2100
+num__dew^2: 1.4739
+num__dew humidity: -0.6466
+num__dew precip: -0.0528
+num__dew snow: 0.0495
+num__dew snowdepth: -0.2239
+num__dew windgust: -1.0916
+num__dew windspeed: -0.8976
+num__dew cloudcover: -0.1868
+num__dew visibility: -0.8626
+num__humidity^2: -1.4752
+num__humidity precip: -0.2892
+num__humidity snow: -0.0550
+num__humidity snowdepth: -0.2499
+num__humidity windgust: 0.2357
+num__humidity windspeed: -0.0241
+num__humidity cloudcover: 0.3283
+num__humidity visibility: 0.6229
+num__precip^2: 0.7059
+num__precip snow: 0.1116
+num__precip snowdepth: 0.0345
+num__precip windgust: -0.6028
+num__precip windspeed: 0.6317
+num__precip cloudcover: 0.5184
+num__precip visibility: -0.1717
+num__snow^2: 0.1494
+num__snow snowdepth: -0.0729
+num__snow windgust: 0.0610
+num__snow windspeed: 0.1692
+num__snow cloudcover: -0.0620
+num__snow visibility: 0.1493
+num__snowdepth^2: 0.6329
+num__snowdepth windgust: -0.0456
+num__snowdepth windspeed: -0.2445
+num__snowdepth cloudcover: 0.2947
+num__snowdepth visibility: -0.3142
+num__windgust^2: 0.0000
+num__windgust windspeed: -0.3756
+num__windgust cloudcover: -0.5146
+num__windgust visibility: 0.1894
+num__windspeed^2: 0.7732
+num__windspeed cloudcover: -0.3177
+num__windspeed visibility: -0.4985
+num__cloudcover^2: 2.8340
+num__cloudcover visibility: -1.2553
+num__visibility^2: 1.1271
+cat__Location.Description_APARTMENT: 0.4710
+cat__Location.Description_POLICE FACILITY / VEHICLE PARKING LOT: -0.0366
+cat__Location.Description_POLICE FACILITY/VEH PARKING LOT: 0.0000
+cat__Location.Description_RESIDENCE: 0.0258
+cat__Location.Description_SIDEWALK: -1.1613
+cat__Location.Description_STREET: 0.7678
+cat__Location.Description_VACANT LOT/LAND: 0.0000
