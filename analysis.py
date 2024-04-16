@@ -114,6 +114,69 @@ history = model.fit(
 test_results = model.evaluate(X_test_preprocessed, y_test, verbose=1)
 print(test_results)
 
+
+##OPTIMIZING
+#%%
+import kerastuner as kt
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Dropout
+from tensorflow.keras.optimizers import Adam
+
+def build_model(hp):
+    model = Sequential()
+    model.add(Dense(hp.Int('first_layer_units', min_value=32, max_value=512, step=32),
+                    activation='relu', input_shape=(X_train_preprocessed.shape[1],)))
+    for i in range(hp.Int('n_layers', 1, 3)):  # Number of hidden layers
+        model.add(Dense(hp.Int(f'dense_{i}_units', min_value=32, max_value=512, step=32), activation='relu'))
+        model.add(Dropout(hp.Float(f'dropout_{i}_rate', min_value=0.0, max_value=0.5, step=0.1)))
+    model.add(Dense(1))  # Output layer
+    model.compile(
+        optimizer=Adam(hp.Choice('learning_rate', values=[1e-2, 1e-3, 1e-4])),
+        loss='mean_squared_error',
+        metrics=['mean_absolute_error', 'mean_squared_error']
+    )
+    return model
+
+tuner = kt.Hyperband(
+    build_model,
+    objective=kt.Objective('val_mean_squared_error', direction='min'),
+    max_epochs=100,
+    factor=3,
+    directory='my_dir',
+    project_name='keras_tuner_demo'
+)
+
+early_stopping = EarlyStopping(
+    monitor='mean_absolute_error',   
+    patience=15,           # Number of epochs with no improvement after which training will be stopped
+    verbose=1,             # To log when training is stopped
+    restore_best_weights=True  # Restores model weights from the epoch with the best value of the monitored metric
+)
+
+tuner.search(X_train_preprocessed, y_train, epochs=50, validation_split=0.2, callbacks=[early_stopping])
+
+# Get the optimal hyperparameters
+best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
+
+
+#%%
+best_model = tuner.hypermodel.build(best_hps)
+history = best_model.fit(X_train_preprocessed, y_train, 
+                         epochs=100, 
+                         validation_split=0.2,
+                         callbacks=[early_stopping])
+
+
+#%%
+print("Best hyperparameters found:")
+for hyperparam in best_hps.get_config()['space']:
+    hp_name = hyperparam['config']['name']
+    hp_value = best_hps.get(hp_name)
+    print(f"{hp_name}: {hp_value} (Type: {hyperparam['class_name']})")
+
+
+
+
 ###SHAP
 #%%
 explainer = shap.Explainer(model, X_train_preprocessed)
@@ -135,16 +198,29 @@ shap.force_plot(
 
 # Generate predictions for the training and testing data
 y_train_pred = model.predict(X_train_preprocessed).flatten()
-
+y_test_pred = model.predict(X_test_preprocessed).flatten()
 # Calculate the residuals
 residuals_train = y_train - y_train_pred
+residuals_test = y_test - y_test_pred
 
 np.corrcoef(residuals_train,y_train)
+np.corrcoef(residuals_test,y_test)
 
 
+#%%
+predictions = model.predict(X_test_preprocessed)
+abs_errors = np.abs(predictions.flatten() - y_test)  # Absolute error
 
+explainer = shap.Explainer(model, X_train_preprocessed)
 
+# Calculate SHAP values for the test set
+shap_values = explainer(X_test_preprocessed)
 
+# Link errors with SHAP values
+shap_errors = shap_values.values * abs_errors[:, None]  # Element-wise multiplication for each feature
+
+# Summarize SHAP values to see the average impact of errors
+shap.summary_plot(shap_errors, X_test_preprocessed, feature_names=feature_names)
 
 
 
